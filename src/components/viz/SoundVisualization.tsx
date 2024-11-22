@@ -3,6 +3,7 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { WavStreamPlayer } from '../../lib/wavtools/index.js'; // Adjust the import path
 import Cloud from './Cloud';
 import CloudApp from './Cloud';
+import EyeShapeScene from './EyeShape';
 
 const SoundVisualization = ({ wavStreamPlayer, isActive = false }: { wavStreamPlayer: WavStreamPlayer, isActive: boolean }) => {
   const meshRef = useRef<any>();
@@ -90,31 +91,17 @@ const SoundVisualization = ({ wavStreamPlayer, isActive = false }: { wavStreamPl
   //   }
   // });
 
+  
   return (
+
+    // <EyeShapeScene />
+
     <CloudApp
       seed1={avgFreq}
       seed2={lowFreq}
       seed3={midFreq}
       seed4={highFreq}
       />
-    // <Canvas>
-    // <ambientLight />
-    // <pointLight position={[10, 10, 10]} />
-    // <group ref={meshRef}>
-    //   <mesh position={[-2, 0, 0]} scale={[lowFreq, lowFreq, lowFreq]} >
-    //     <boxGeometry args={[1, 1, 1]} />
-    //     <meshStandardMaterial color="red" />
-    //   </mesh>
-    //   <mesh position={[0, 0, 0]} scale={[midFreq, midFreq, midFreq]} >
-    //     <sphereGeometry args={[1, 32, 32]} />
-    //     <meshStandardMaterial color="green" />
-    //   </mesh>
-    //   <mesh position={[2, 0, 0]} scale={[highFreq, highFreq, highFreq]}>
-    //     <coneGeometry args={[1, 2, 32]}  />
-    //     <meshStandardMaterial color="blue" />
-    //   </mesh>
-    // </group>
-    // </Canvas>
   );
 };
 

@@ -27,6 +27,7 @@ import { Cross2Icon, HamburgerMenuIcon, Pencil2Icon, SwitchIcon } from '@radix-u
 import { Button, IconButton } from '@radix-ui/themes';
 import { is } from '@react-three/fiber/dist/declarations/src/core/utils.js';
 import * as ToggleGroup from "@radix-ui/react-toggle-group";
+import OpenAI from 'openai';
 
 /**
  * Type for all event logs
@@ -95,6 +96,10 @@ export function ConsolePage() {
     new WavStreamPlayer({ sampleRate: 24000 })
   );
 
+  const [isPlayerReady, setIsPlayerReady] = useState(false);
+
+  // #region Sidebar
+
 
   /**
    * References for
@@ -102,8 +107,6 @@ export function ConsolePage() {
    * - Autoscrolling event logs
    * - Timing delta for event log displays
    */
-  const clientCanvasRef = useRef<HTMLCanvasElement>(null);
-  const serverCanvasRef = useRef<HTMLCanvasElement>(null);
   const eventsScrollHeightRef = useRef(0);
   const eventsScrollRef = useRef<HTMLDivElement>(null);
   const startTimeRef = useRef<string>(new Date().toISOString());
@@ -125,8 +128,12 @@ export function ConsolePage() {
   const [isRecording, setIsRecording] = useState(false);
   const [memoryKv, setMemoryKv] = useState<{ [key: string]: any }>({});
 
-  const [showSettings, setShowSettings] = useState(false);
+  const [showRightSidebar, setShowRightSidebar] = useState(false);
+  const toggleRightSidebar = () => {
+    setShowRightSidebar(!showRightSidebar);
+  }
 
+  const [showSettings, setShowSettings] = useState(false);
   const toggleSettings = () => {
     setShowSettings(!showSettings);
   };
@@ -156,9 +163,37 @@ export function ConsolePage() {
 
   // #endregion
 
+  /**
+     * Auto-scroll the event logs
+     */
+  useEffect(() => {
+    if (eventsScrollRef.current) {
+      const eventsEl = eventsScrollRef.current;
+      const scrollHeight = eventsEl.scrollHeight;
+      // Only scroll if height has just changed
+      if (scrollHeight !== eventsScrollHeightRef.current) {
+        eventsEl.scrollTop = scrollHeight;
+        eventsScrollHeightRef.current = scrollHeight;
+      }
+    }
+  }, [realtimeEvents]);
+
+  /**
+   * Auto-scroll the conversation logs
+   */
+  useEffect(() => {
+    const conversationEls = [].slice.call(
+      document.body.querySelectorAll('[data-conversation-content]')
+    );
+    for (const el of conversationEls) {
+      const conversationEl = el as HTMLDivElement;
+      conversationEl.scrollTop = conversationEl.scrollHeight;
+    }
+  }, [items]);
+
+  // #endregion
 
 
-  const [isPlayerReady, setIsPlayerReady] = useState(false);
 
   /**
    * Connect to conversation:
@@ -264,103 +299,78 @@ export function ConsolePage() {
     setCanPushToTalk(value === 'none');
   };
 
-  /**
-   * Auto-scroll the event logs
-   */
-  useEffect(() => {
-    if (eventsScrollRef.current) {
-      const eventsEl = eventsScrollRef.current;
-      const scrollHeight = eventsEl.scrollHeight;
-      // Only scroll if height has just changed
-      if (scrollHeight !== eventsScrollHeightRef.current) {
-        eventsEl.scrollTop = scrollHeight;
-        eventsScrollHeightRef.current = scrollHeight;
-      }
-    }
-  }, [realtimeEvents]);
 
-  /**
-   * Auto-scroll the conversation logs
-   */
-  useEffect(() => {
-    const conversationEls = [].slice.call(
-      document.body.querySelectorAll('[data-conversation-content]')
-    );
-    for (const el of conversationEls) {
-      const conversationEl = el as HTMLDivElement;
-      conversationEl.scrollTop = conversationEl.scrollHeight;
-    }
-  }, [items]);
 
   /**
    * Set up render loops for the visualization canvas
    */
-  useEffect(() => {
-    let isLoaded = true;
+  // useEffect(() => {
+  //   let isLoaded = true;
 
-    const wavRecorder = wavRecorderRef.current;
-    const clientCanvas = clientCanvasRef.current;
-    let clientCtx: CanvasRenderingContext2D | null = null;
+  //   const wavRecorder = wavRecorderRef.current;
+  //   const wavStreamPlayer = wavStreamPlayerRef.current;
 
-    const wavStreamPlayer = wavStreamPlayerRef.current;
-    const serverCanvas = serverCanvasRef.current;
-    let serverCtx: CanvasRenderingContext2D | null = null;
 
-    const render = () => {
-      if (isLoaded) {
-        if (clientCanvas) {
-          if (!clientCanvas.width || !clientCanvas.height) {
-            clientCanvas.width = clientCanvas.offsetWidth;
-            clientCanvas.height = clientCanvas.offsetHeight;
-          }
-          clientCtx = clientCtx || clientCanvas.getContext('2d');
-          if (clientCtx) {
-            clientCtx.clearRect(0, 0, clientCanvas.width, clientCanvas.height);
-            const result = wavRecorder.recording
-              ? wavRecorder.getFrequencies('voice')
-              : { values: new Float32Array([0]) };
-            WavRenderer.drawBars(
-              clientCanvas,
-              clientCtx,
-              result.values,
-              '#0099ff',
-              10,
-              0,
-              8
-            );
-          }
-        }
-        if (serverCanvas) {
-          if (!serverCanvas.width || !serverCanvas.height) {
-            serverCanvas.width = serverCanvas.offsetWidth;
-            serverCanvas.height = serverCanvas.offsetHeight;
-          }
-          serverCtx = serverCtx || serverCanvas.getContext('2d');
-          if (serverCtx) {
-            serverCtx.clearRect(0, 0, serverCanvas.width, serverCanvas.height);
-            const result = wavStreamPlayer.analyser
-              ? wavStreamPlayer.getFrequencies('voice')
-              : { values: new Float32Array([0]) };
-            WavRenderer.drawBars(
-              serverCanvas,
-              serverCtx,
-              result.values,
-              '#009900',
-              10,
-              0,
-              8
-            );
-          }
-        }
-        window.requestAnimationFrame(render);
-      }
-    };
-    render();
+  //   const clientCanvas = clientCanvasRef.current;
+  //   let clientCtx: CanvasRenderingContext2D | null = null;
+  //   const serverCanvas = serverCanvasRef.current;
+  //   let serverCtx: CanvasRenderingContext2D | null = null;
 
-    return () => {
-      isLoaded = false;
-    };
-  }, []);
+  //   const render = () => {
+  //     if (isLoaded) {
+  //       if (clientCanvas) {
+  //         if (!clientCanvas.width || !clientCanvas.height) {
+  //           clientCanvas.width = clientCanvas.offsetWidth;
+  //           clientCanvas.height = clientCanvas.offsetHeight;
+  //         }
+  //         clientCtx = clientCtx || clientCanvas.getContext('2d');
+  //         if (clientCtx) {
+  //           clientCtx.clearRect(0, 0, clientCanvas.width, clientCanvas.height);
+  //           const result = wavRecorder.recording
+  //             ? wavRecorder.getFrequencies('voice')
+  //             : { values: new Float32Array([0]) };
+  //           WavRenderer.drawBars(
+  //             clientCanvas,
+  //             clientCtx,
+  //             result.values,
+  //             '#0099ff',
+  //             10,
+  //             0,
+  //             8
+  //           );
+  //         }
+  //       }
+  //       if (serverCanvas) {
+  //         if (!serverCanvas.width || !serverCanvas.height) {
+  //           serverCanvas.width = serverCanvas.offsetWidth;
+  //           serverCanvas.height = serverCanvas.offsetHeight;
+  //         }
+  //         serverCtx = serverCtx || serverCanvas.getContext('2d');
+  //         if (serverCtx) {
+  //           serverCtx.clearRect(0, 0, serverCanvas.width, serverCanvas.height);
+  //           const result = wavStreamPlayer.analyser
+  //             ? wavStreamPlayer.getFrequencies('voice')
+  //             : { values: new Float32Array([0]) };
+  //           WavRenderer.drawBars(
+  //             serverCanvas,
+  //             serverCtx,
+  //             result.values,
+  //             '#009900',
+  //             10,
+  //             0,
+  //             8
+  //           );
+  //         }
+  //       }
+  //       window.requestAnimationFrame(render);
+  //     }
+  //   };
+  //   render();
+
+  //   return () => {
+  //     isLoaded = false;
+  //   };
+  // }, []);
 
   /**
    * Core RealtimeClient and audio capture setup
@@ -404,6 +414,24 @@ export function ConsolePage() {
           return newKv;
         });
         return { ok: true };
+      }
+    );
+
+    client.addTool(
+      {
+        name: "describe_webcam_image",
+        description:
+          "Describes the image captured from the webcam.",
+        parameters: {
+          type: "object",
+          properties: {},
+          required: [],
+        },
+      },
+      async () => {
+        const imageDescription = await captureAndAnalyzeImage();
+        console.log("Image description:", imageDescription);
+        return { description: imageDescription };
       }
     );
 
@@ -501,6 +529,172 @@ export function ConsolePage() {
 
   // #endregion
 
+  //#region video cam
+
+  const openaiRef = useRef<OpenAI>(new OpenAI({ apiKey: apiKey, dangerouslyAllowBrowser: true }))
+
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [description, setDescription] = useState<string | null>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+
+    if (video) {
+      navigator.mediaDevices
+        .getUserMedia({ video: true })
+        .then((stream) => {
+          video.srcObject = stream;
+          video.onloadedmetadata = () => {
+            video.play().catch((error) => {
+              console.error("Error attempting to play video:", error);
+            });
+          };
+        })
+        .catch((error) => {
+          console.error("Error accessing media devices:", error);
+        });
+    }
+  }, []);
+
+  const analyzeImage = async (imageDataUrl: string) => {
+    const base64Image = imageDataUrl.split(",")[1]; // Extract base64 data
+
+    if (!base64Image) {
+      return "No image data available.";
+    }
+
+    if (!openaiRef.current) {
+      return "OpenAI API not available.";
+    }
+
+    try {
+      const response = await openaiRef.current.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Describe the picture in great detail. As a very observant person or artist would. Do NOT try to identify people on it." },
+              { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64Image}` } },
+            ],
+          },
+        ],
+        max_tokens: 300,
+      });
+
+      const description = response.choices[0]?.message?.content || "No description available.";
+      return description;
+    } catch (error) {
+      console.error("Error analyzing image:", error);
+      return "Failed to analyze the image.";
+    }
+  };
+
+  const captureAndAnalyzeImage = useCallback(async () => {
+    const canvas = canvasRef.current;
+    const video = videoRef.current;
+
+    if (canvas && video) {
+      const context = canvas.getContext("2d");
+      if (context) {
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL("image/png");
+        setCapturedImage(dataUrl);
+        imgRef.current!.src = dataUrl;
+
+        const imageDescription = await analyzeImage(dataUrl);
+        setDescription(imageDescription);
+
+        return imageDescription; // For the agent tool to return
+      }
+    }
+  }, []);
+
+  // useEffect(() => {
+  //   const client = clientRef.current;
+
+  //   // Add capture and analyze tool
+  //   client.addTool(
+  //     {
+  //       name: "capture_and_analyze_image",
+  //       description:
+  //         "Captures an image from the webcam, analyzes it using OpenAI Vision API, and provides a description.",
+  //       parameters: {
+  //         type: "object",
+  //         properties: {},
+  //         required: [],
+  //       },
+  //     },
+  //     async () => {
+  //       const imageDescription = await captureAndAnalyzeImage();
+  //       return { description: imageDescription };
+  //     }
+  //   );
+  // }, [captureAndAnalyzeImage]);
+
+
+
+
+  useEffect(() => {
+    // Add a tool for capturing and analyzing images
+    const client = clientRef.current;
+
+    client.addTool(
+      {
+        name: "capture_and_analyze",
+        description:
+          "Captures an image from the webcam, describes it, and stores the description in memory.",
+        parameters: {
+          type: "object",
+          properties: {},
+          required: [],
+        },
+      },
+      async () => {
+        await captureAndAnalyzeImage();
+        return { message: "Image captured and analyzed successfully." };
+      }
+    );
+  }, [captureAndAnalyzeImage]);
+
+  // useEffect(() => {
+  //   const video = videoRef.current;
+  //   const canvas = canvasRef.current;
+  //   const img = imgRef.current;
+
+  //   if (video && canvas && img) {
+  //     navigator.mediaDevices.getUserMedia({ video: true })
+  //       .then(stream => {
+  //         video.srcObject = stream;
+  //         video.addEventListener('loadedmetadata', () => {
+  //           video.play();
+  //         });
+  //       })
+  //       .catch(err => {
+  //         console.error("Error accessing webcam: ", err);
+  //       });
+
+  //     const captureFrame = () => {
+  //       const context = canvas.getContext('2d');
+  //       if (context) {
+  //         context.drawImage(video, 0, 0, canvas.width, canvas.height);
+  //         img.src = canvas.toDataURL('image/png');
+  //       }
+  //     };
+
+  //     const intervalId = setInterval(captureFrame, 10000);
+
+  //     return () => clearInterval(intervalId);
+  //   }
+  // }, []);
+
+  //#endregion
+
+
   /**
    * Render the application
    */
@@ -542,7 +736,7 @@ export function ConsolePage() {
             {isConnected && (
               <ToggleGroup.Root
                 type="single"
-                
+
                 defaultValue="none"
                 onValueChange={(value) => changeTurnEndType(value)}
               >
@@ -565,22 +759,73 @@ export function ConsolePage() {
         {
           // visualization
         }
-        <div 
-        className='fixed inset-0 bg-black'
+        <div
+          className='fixed inset-0 bg-black'
         >
-          {/* <CloudApp /> */}
-        {/* {isPlayerReady && ( */}
-          
-            <SoundVisualization 
-              wavStreamPlayer={wavStreamPlayerRef.current} 
-              isActive={isPlayerReady}
-              />
-          
-        {/* )} */}
+
+
+
+          <SoundVisualization
+            wavStreamPlayer={wavStreamPlayerRef.current}
+            isActive={isPlayerReady}
+          />
+
+
+
         </div>
       </div>
+
       {
-        // settings
+        // #region Right Sidebar: Video
+      }
+      <IconButton
+        className='fixed top-4 right-4'
+        variant='ghost'
+        size={'3'}
+        onClick={toggleRightSidebar}
+      >
+        <HamburgerMenuIcon />
+      </IconButton>
+      <div className={`fixed top-0 bottom-0 right-0 max-h-screen p-4 !overflow-scroll h-full bg-gray-200 transition-transform duration-300 ease-in-out w-[300px] ${showRightSidebar ? 'transform translate-x-0' : 'transform translate-x-full'
+        }`}
+      >
+        <IconButton
+          variant='ghost'
+          size={'3'}
+          className="absolute top-4 right-4"
+          onClick={toggleRightSidebar}
+        >
+          <Cross2Icon />
+        </IconButton>
+
+        {
+          // Webcam
+        }
+
+        <div>
+          <div id="webcam" className='mt-12 flex flex-col space-y-2'>
+            <video ref={videoRef} style={{ display: "block" }}></video>
+            <canvas
+              ref={canvasRef}
+              style={{ display: "none" }}
+              width="640"
+              height="480"
+            ></canvas>
+            <img
+              ref={imgRef}
+              src={capturedImage || ""}
+              alt="Captured Snapshot"
+              className={`${capturedImage ? 'block' : 'hidden'}`}
+            />
+            {description && <p>Analysis: {description}</p>}
+            <Button variant='classic' onClick={captureAndAnalyzeImage}>Capture and Analyze</Button>
+          </div>
+        </div>
+      </div>
+
+
+      {
+        // #region Left Sidebar: Settings, Events, Conversation
       }
       <IconButton
         className='fixed top-4 left-4'
@@ -764,6 +1009,9 @@ export function ConsolePage() {
           </div>
         </div>
       </div>
+      {
+        // #endregion
+      }
 
 
     </div>
