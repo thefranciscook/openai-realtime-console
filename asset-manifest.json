@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/openai-realtime-console/static/css/main.ce830390.css",
-    "main.js": "/openai-realtime-console/static/js/main.95959188.js",
+    "main.css": "/openai-realtime-console/static/css/main.93dab45a.css",
+    "main.js": "/openai-realtime-console/static/js/main.2a3cfc31.js",
     "static/js/453.e76c913f.chunk.js": "/openai-realtime-console/static/js/453.e76c913f.chunk.js",
     "index.html": "/openai-realtime-console/index.html",
-    "main.ce830390.css.map": "/openai-realtime-console/static/css/main.ce830390.css.map",
-    "main.95959188.js.map": "/openai-realtime-console/static/js/main.95959188.js.map",
+    "main.93dab45a.css.map": "/openai-realtime-console/static/css/main.93dab45a.css.map",
+    "main.2a3cfc31.js.map": "/openai-realtime-console/static/js/main.2a3cfc31.js.map",
     "453.e76c913f.chunk.js.map": "/openai-realtime-console/static/js/453.e76c913f.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.ce830390.css",
-    "static/js/main.95959188.js"
+    "static/css/main.93dab45a.css",
+    "static/js/main.2a3cfc31.js"
   ]
 }
